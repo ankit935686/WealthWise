@@ -1,4 +1,5 @@
 import { Link } from 'react-router-dom';
+import { useEffect, useRef, useState } from 'react';
 import {
   Bot,
   BrainCircuit,
@@ -6,6 +7,8 @@ import {
   CircleCheck,
   Gem,
   Goal,
+  Menu,
+  X,
   ShieldCheck,
   Sparkles,
   WalletCards,
@@ -48,37 +51,150 @@ const footerLinks = {
   Support: ['Help Center', 'Guides', 'FAQs', 'Community', 'Contact Support'],
 };
 
+const navItems = [
+  { label: 'Home', href: '#', hash: '' },
+  { label: 'Features', href: '#features', hash: '#features' },
+  { label: 'AI Advisor', href: '#advisor', hash: '#advisor' },
+  { label: 'Pricing', href: '#', hash: '' },
+  { label: 'Blog', href: '#', hash: '' },
+  { label: 'About', href: '#', hash: '' },
+];
+
 const HomePage = () => {
   const { currentUser } = useAuth();
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const [activeNav, setActiveNav] = useState('Home');
+  const [isScrolled, setIsScrolled] = useState(false);
+  const mobileMenuId = 'ww-home-mobile-menu';
+  const mobileMenuButtonRef = useRef(null);
+
+  useEffect(() => {
+    const updateActiveNav = () => {
+      const hash = window.location.hash;
+
+      if (hash === '#features') {
+        setActiveNav('Features');
+        return;
+      }
+
+      if (hash === '#advisor') {
+        setActiveNav('AI Advisor');
+        return;
+      }
+
+      setActiveNav('Home');
+    };
+
+    updateActiveNav();
+    window.addEventListener('hashchange', updateActiveNav);
+
+    return () => {
+      window.removeEventListener('hashchange', updateActiveNav);
+    };
+  }, []);
+
+  useEffect(() => {
+    const handleResize = () => {
+      if (window.innerWidth >= 1024) {
+        setMobileMenuOpen(false);
+      }
+    };
+
+    const handleScroll = () => {
+      setIsScrolled(window.scrollY > 8);
+    };
+
+    const handleKeyDown = (event) => {
+      if (event.key === 'Escape') {
+        setMobileMenuOpen(false);
+        mobileMenuButtonRef.current?.focus();
+      }
+    };
+
+    handleResize();
+    handleScroll();
+
+    window.addEventListener('resize', handleResize);
+    window.addEventListener('scroll', handleScroll, { passive: true });
+    window.addEventListener('keydown', handleKeyDown);
+
+    return () => {
+      window.removeEventListener('resize', handleResize);
+      window.removeEventListener('scroll', handleScroll);
+      window.removeEventListener('keydown', handleKeyDown);
+    };
+  }, []);
+
+  useEffect(() => {
+    const previousOverflow = document.body.style.overflow;
+    document.body.style.overflow = mobileMenuOpen ? 'hidden' : previousOverflow;
+
+    return () => {
+      document.body.style.overflow = previousOverflow;
+    };
+  }, [mobileMenuOpen]);
+
+  const closeMobileMenu = () => {
+    setMobileMenuOpen(false);
+  };
+
+  const handleNavClick = (item, event) => {
+    setActiveNav(item.label);
+    closeMobileMenu();
+
+    if (!item.hash) {
+      return;
+    }
+
+    event.preventDefault();
+    const targetElement = document.querySelector(item.hash);
+    if (targetElement) {
+      targetElement.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      window.history.replaceState(null, '', item.hash);
+    }
+  };
 
   return (
-    <main style={{ minHeight: '100vh', background: 'var(--bg-base)', color: 'var(--text-primary)', fontFamily: "'Inter', sans-serif" }}>
+    <main className="ww-home-page" style={{ minHeight: '100vh', background: 'var(--bg-base)', color: 'var(--text-primary)', fontFamily: "'Inter', sans-serif" }}>
 
       {/* ── NAVBAR ── */}
-      <header style={{ width: '100%', background: 'var(--nav-bg)', padding: '14px 32px', backdropFilter: 'blur(16px)' }}>
-        <nav style={{ maxWidth: 1280, margin: '0 auto', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-            <span style={{ display: 'inline-flex', height: 28, width: 28, alignItems: 'center', justifyContent: 'center', borderRadius: 8, background: 'linear-gradient(135deg,var(--accent),var(--accent-hover))', color: '#fff' }}>
+      <header className={`ww-home-header ${isScrolled ? 'ww-home-header-scrolled' : ''}`} style={{ width: '100%', background: 'var(--nav-bg)', padding: '14px 32px', backdropFilter: 'blur(16px)' }}>
+        <nav className="ww-home-nav" style={{ maxWidth: 1280, margin: '0 auto', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+          <div className="ww-home-brand" style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+            <span className="ww-home-brand-mark" style={{ display: 'inline-flex', height: 28, width: 28, alignItems: 'center', justifyContent: 'center', borderRadius: 8, background: 'linear-gradient(135deg,var(--accent),var(--accent-hover))', color: '#fff' }}>
               <Sparkles size={13} />
             </span>
-            <span style={{ fontWeight: 800, fontSize: 16, color: 'var(--text-primary)' }}>WealthWise</span>
+            <span className="ww-home-brand-text" style={{ fontWeight: 800, fontSize: 16, color: 'var(--text-primary)' }}>WealthWise</span>
           </div>
 
-          <div style={{ display: 'flex', alignItems: 'center', gap: 28, fontSize: 14, fontWeight: 500, color: 'var(--text-secondary)' }}>
-            {['Home','Features','AI Advisor','Pricing','Blog','About'].map(l => (
+          <div className="ww-home-nav-links" style={{ display: 'flex', alignItems: 'center', gap: 28, fontSize: 14, fontWeight: 500, color: 'var(--text-secondary)' }}>
+            {navItems.map((item) => (
               <a
-                key={l}
-                href={l === 'Features' ? '#features' : l === 'AI Advisor' ? '#advisor' : '#'}
-                className="ww-nav-link"
+                key={item.label}
+                href={item.href}
+                onClick={(event) => handleNavClick(item, event)}
+                className={`ww-nav-link ${activeNav === item.label ? 'ww-nav-link-active' : ''}`}
+                aria-current={activeNav === item.label ? 'page' : undefined}
                 style={{ color: 'var(--text-secondary)', textDecoration: 'none' }}
               >
-                {l}
+                {item.label}
               </a>
             ))}
           </div>
 
-          <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-            <ThemeToggle />
+          <div className="ww-home-nav-actions" style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+            <ThemeToggle className="ww-home-theme-toggle-compact" />
+            <button
+              ref={mobileMenuButtonRef}
+              type="button"
+              className="ww-home-menu-icon"
+              onClick={() => setMobileMenuOpen((previous) => !previous)}
+              aria-label={mobileMenuOpen ? 'Close menu' : 'Open menu'}
+              aria-expanded={mobileMenuOpen}
+              aria-controls={mobileMenuId}
+            >
+              {mobileMenuOpen ? <X size={24} /> : <Menu size={26} />}
+            </button>
             {!currentUser && (
               <>
                 <Link to="/login" className="ww-nav-link" style={{ padding: '8px 16px', fontSize: 14, fontWeight: 600, color: 'var(--text-primary)', textDecoration: 'none' }}>Login</Link>
@@ -94,16 +210,117 @@ const HomePage = () => {
             )}
           </div>
         </nav>
+
+        <div
+          id={mobileMenuId}
+          className="ww-home-mobile-menu"
+          aria-hidden={!mobileMenuOpen}
+          style={{
+            maxHeight: mobileMenuOpen ? '420px' : '0px',
+            opacity: mobileMenuOpen ? 1 : 0,
+            transform: mobileMenuOpen ? 'translateY(0)' : 'translateY(-8px)',
+            transition: 'max-height 280ms ease, opacity 220ms ease, transform 220ms ease',
+            overflow: 'hidden',
+            pointerEvents: mobileMenuOpen ? 'auto' : 'none',
+          }}
+        >
+          <div className="ww-home-mobile-menu-panel" style={{ borderTop: '1px solid var(--border)', background: 'var(--bg-base)', padding: '12px 0 16px' }}>
+            <div className="ww-home-mobile-menu-links" style={{ display: 'grid', gap: 8, padding: '0 20px 12px' }}>
+              {navItems.map((item) => (
+                <a
+                  key={item.label}
+                  href={item.href}
+                  onClick={(event) => handleNavClick(item, event)}
+                  className={`ww-home-mobile-menu-link ${activeNav === item.label ? 'ww-home-mobile-menu-link-active' : ''}`}
+                  aria-current={activeNav === item.label ? 'page' : undefined}
+                  style={{
+                    borderRadius: 14,
+                    border: '1px solid var(--border)',
+                    background: activeNav === item.label ? 'var(--accent-soft)' : 'var(--bg-surface)',
+                    padding: '12px 14px',
+                    fontSize: 14,
+                    fontWeight: 600,
+                    color: 'var(--text-primary)',
+                    textDecoration: 'none',
+                  }}
+                >
+                  {item.label}
+                </a>
+              ))}
+            </div>
+
+            <div className="ww-home-mobile-menu-actions" style={{ display: 'grid', gap: 10, padding: '0 20px' }}>
+              {!currentUser ? (
+                <>
+                  <Link
+                    to="/login"
+                    onClick={closeMobileMenu}
+                    className="ww-nav-link"
+                    style={{
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      padding: '11px 16px',
+                      borderRadius: 14,
+                      border: '1px solid var(--border)',
+                      fontSize: 14,
+                      fontWeight: 600,
+                      color: 'var(--text-primary)',
+                      textDecoration: 'none',
+                    }}
+                  >
+                    Login
+                  </Link>
+                  <Link
+                    to="/signup"
+                    onClick={closeMobileMenu}
+                    className="ww-btn-accent"
+                    style={{
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      borderRadius: 14,
+                      padding: '11px 16px',
+                      fontSize: 14,
+                      fontWeight: 700,
+                      textDecoration: 'none',
+                    }}
+                  >
+                    Get Started Free
+                  </Link>
+                </>
+              ) : (
+                <Link
+                  to="/dashboard"
+                  onClick={closeMobileMenu}
+                  className="ww-btn-accent"
+                  style={{
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    borderRadius: 14,
+                    padding: '11px 16px',
+                    fontSize: 14,
+                    fontWeight: 700,
+                    textDecoration: 'none',
+                  }}
+                >
+                  Open Dashboard
+                </Link>
+              )}
+            </div>
+          </div>
+        </div>
       </header>
 
       {/* ── HERO ── */}
-      <section style={{ maxWidth: 1280, margin: '0 auto', padding: '40px 32px 64px', display: 'grid', gridTemplateColumns: '1fr 1.15fr', gap: 48, alignItems: 'center' }}>
+      <section className="ww-home-hero" style={{ maxWidth: 1280, margin: '0 auto', padding: '40px 32px 64px', display: 'grid', gridTemplateColumns: '1fr 1.15fr', gap: 48, alignItems: 'center' }}>
         {/* Left */}
         <div>
           <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6, borderRadius: 999, border: '1px solid var(--accent-border)', background: 'var(--pill-bg)', padding: '5px 12px', fontSize: 12, fontWeight: 600, color: 'var(--pill-text)' }}>
             <Sparkles size={11} /> AI-Powered Personal Finance
           </span>
-          <h1 style={{ marginTop: 20, fontSize: 56, fontWeight: 900, lineHeight: 1.07, letterSpacing: '-1.5px', color: 'var(--text-primary)' }}>
+          <h1 className="ww-home-hero-title" style={{ marginTop: 20, fontSize: 56, fontWeight: 900, lineHeight: 1.07, letterSpacing: '-1.5px', color: 'var(--text-primary)' }}>
             <span style={{ background: 'linear-gradient(135deg, var(--accent), #60A5FA)', WebkitBackgroundClip: 'text', color: 'transparent', display: 'inline-block' }}>
               Smarter Money.
             </span>
@@ -134,9 +351,9 @@ const HomePage = () => {
         </div>
 
         {/* Right – Dashboard Mockup */}
-        <div className="theme-surface" style={{ borderRadius: 20, border: '1px solid var(--border)', background: 'var(--bg-surface)', boxShadow: 'var(--shadow)', overflow: 'hidden' }}>
+        <div className="theme-surface ww-home-mockup" style={{ borderRadius: 20, border: '1px solid var(--border)', background: 'var(--bg-surface)', boxShadow: 'var(--shadow)', overflow: 'hidden' }}>
           {/* Top bar */}
-          <div className="theme-surface" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', borderBottom: '1px solid var(--border)', padding: '12px 20px' }}>
+          <div className="theme-surface ww-home-mockup-topbar" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', borderBottom: '1px solid var(--border)', padding: '12px 20px' }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
               <span style={{ display: 'inline-flex', height: 20, width: 20, alignItems: 'center', justifyContent: 'center', borderRadius: 6, background: 'var(--accent)', color: '#fff' }}>
                 <Sparkles size={10} />
@@ -153,7 +370,7 @@ const HomePage = () => {
 
           <div style={{ display: 'flex' }}>
             {/* Sidebar */}
-            <div className="theme-surface" style={{ width: 130, borderRight: '1px solid var(--border)', padding: '12px 8px', flexShrink: 0 }}>
+            <div className="theme-surface ww-home-mockup-sidebar" style={{ width: 130, borderRight: '1px solid var(--border)', padding: '12px 8px', flexShrink: 0 }}>
               {['Dashboard','Transactions','Budgets','Goals','Investments','Reports','Subscriptions','AI Advisor','Settings'].map(item => (
                 <div key={item} style={{ borderRadius: 6, padding: '6px 10px', fontSize: 10, fontWeight: 500, marginBottom: 2, background: item === 'Dashboard' ? 'var(--accent-soft)' : 'transparent', color: item === 'Dashboard' ? 'var(--accent)' : 'var(--text-muted)' }}>
                   {item}
@@ -167,7 +384,7 @@ const HomePage = () => {
               <p style={{ fontSize: 10, color: 'var(--text-muted)', marginBottom: 12 }}>Here's your financial overview.</p>
 
               {/* Stats */}
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 8, marginBottom: 12 }}>
+              <div className="ww-home-mockup-stats" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 8, marginBottom: 12 }}>
                 {[
                   { label: 'Total Balance', val: '$8,542.50', sub: '+12.5% this month', subColor: '#10B981' },
                   { label: 'Income', val: '$5,820.00', sub: '+6.2%', subColor: '#10B981' },
@@ -182,7 +399,7 @@ const HomePage = () => {
               </div>
 
               {/* Bottom */}
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
+              <div className="ww-home-mockup-bottom" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
                 {/* Spending */}
                 <div className="theme-surface" style={{ borderRadius: 10, border: '1px solid var(--border)', background: 'var(--bg-elevated)', padding: '10px' }}>
                   <p style={{ fontSize: 9, fontWeight: 600, color: 'var(--text-primary)', marginBottom: 8 }}>Spending Overview</p>
@@ -230,8 +447,8 @@ const HomePage = () => {
       {/* ── FEATURES ── */}
       <section id="features" style={{ maxWidth: 1280, margin: '0 auto', padding: '0 32px 64px', background: 'var(--bg-surface)', borderTop: '1px solid var(--border)', borderBottom: '1px solid var(--border)' }}>
         <div className="theme-surface" style={{ borderRadius: 24, border: '1px solid var(--border)', background: 'var(--bg-surface)', padding: 40, boxShadow: 'var(--shadow-card)' }}>
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 2fr', gap: 40 }}>
-            <div style={{ display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
+          <div className="ww-home-features-grid" style={{ display: 'grid', gridTemplateColumns: '1fr 2fr', gap: 40 }}>
+            <div className="ww-home-features-copy" style={{ display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
               <span style={{ display: 'inline-flex', width: 'fit-content', alignItems: 'center', gap: 6, borderRadius: 999, border: '1px solid var(--accent-border)', background: 'var(--pill-bg)', padding: '5px 12px', fontSize: 12, fontWeight: 600, color: 'var(--pill-text)' }}>
                 <Sparkles size={11} /> Why WealthWise?
               </span>
@@ -243,7 +460,7 @@ const HomePage = () => {
               </p>
             </div>
 
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 16 }}>
+            <div className="ww-home-feature-grid-cards" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 16 }}>
               {features.map(({ icon: Icon, title, desc }) => (
                 <article key={title} className="theme-surface ww-feature-card" style={{ borderRadius: 16, border: '1px solid var(--border)', background: 'var(--bg-card)', padding: 20 }}>
                   <span style={{ display: 'inline-flex', height: 40, width: 40, alignItems: 'center', justifyContent: 'center', borderRadius: 12, background: 'var(--accent-soft)', color: 'var(--accent)', border: '1px solid var(--accent-border)' }}>
@@ -260,7 +477,7 @@ const HomePage = () => {
 
       {/* ── AI ADVISOR ── */}
       <section id="advisor" style={{ maxWidth: 1280, margin: '0 auto', padding: '0 32px 64px' }}>
-        <div className="theme-surface" style={{ borderRadius: 24, border: '1px solid var(--border)', background: 'var(--bg-base)', padding: 40, display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 48, alignItems: 'center' }}>
+        <div className="theme-surface ww-home-advisor-grid" style={{ borderRadius: 24, border: '1px solid var(--border)', background: 'var(--bg-base)', padding: 40, display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 48, alignItems: 'center' }}>
           <div>
             <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6, borderRadius: 999, border: '1px solid var(--accent-border)', background: 'var(--pill-bg)', padding: '5px 12px', fontSize: 12, fontWeight: 600, color: 'var(--pill-text)' }}>
               <Sparkles size={11} /> AI-Powered Insights
@@ -284,7 +501,7 @@ const HomePage = () => {
           </div>
 
           {/* Chat mockup */}
-          <div className="theme-surface" style={{ borderRadius: 20, border: '1px solid var(--border)', background: 'var(--bg-surface)', padding: 20, boxShadow: 'var(--shadow-card)' }}>
+          <div className="theme-surface ww-home-advisor-panel" style={{ borderRadius: 20, border: '1px solid var(--border)', background: 'var(--bg-surface)', padding: 20, boxShadow: 'var(--shadow-card)' }}>
             <div className="theme-surface" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', borderBottom: '1px solid var(--border)', paddingBottom: 12, marginBottom: 12 }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
                 <span style={{ display: 'inline-flex', height: 24, width: 24, alignItems: 'center', justifyContent: 'center', borderRadius: '50%', background: 'var(--accent)', color: '#fff' }}>
@@ -336,11 +553,11 @@ const HomePage = () => {
             </h2>
           </div>
 
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr 1fr', gap: 24 }}>
+          <div className="ww-home-steps-grid" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr 1fr', gap: 24 }}>
             {steps.map((step, i) => (
               <div key={step.no} style={{ position: 'relative', display: 'flex', flexDirection: 'column', alignItems: 'center', textAlign: 'center' }}>
                 {i < steps.length - 1 && (
-                  <div style={{ position: 'absolute', top: 14, right: -12, zIndex: 10 }}>
+                  <div className="ww-home-step-arrow" style={{ position: 'absolute', top: 14, right: -12, zIndex: 10 }}>
                     <ArrowRight size={16} color="var(--border)" />
                   </div>
                 )}
@@ -358,18 +575,18 @@ const HomePage = () => {
 
       {/* ── CTA ── */}
       <section style={{ maxWidth: 1280, margin: '0 auto', padding: '0 32px 64px' }}>
-        <div style={{ position: 'relative', overflow: 'hidden', borderRadius: 24, background: 'var(--cta-bg)', padding: 48, boxShadow: 'var(--shadow)' }}>
+        <div className="ww-home-cta" style={{ position: 'relative', overflow: 'hidden', borderRadius: 24, background: 'var(--cta-bg)', padding: 48, boxShadow: 'var(--shadow)' }}>
           <div style={{ position: 'absolute', right: 0, top: 0, width: '30%', height: '100%', background: 'rgba(139,92,246,0.15)', borderRadius: '50%', filter: 'blur(60px)', pointerEvents: 'none' }} />
-          <div style={{ position: 'relative', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 24, flexWrap: 'wrap' }}>
+          <div className="ww-home-cta-inner" style={{ position: 'relative', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 24, flexWrap: 'wrap' }}>
             <div>
-              <h2 style={{ fontSize: 30, fontWeight: 900, color: '#fff', letterSpacing: '-0.5px' }}>
+              <h2 className="ww-home-cta-title" style={{ fontSize: 30, fontWeight: 900, color: '#fff', letterSpacing: '-0.5px' }}>
                 Ready To Take Control Of Your Finances?
               </h2>
               <p style={{ marginTop: 8, fontSize: 14, color: 'rgba(255,255,255,0.8)' }}>
                 Join thousands of smart users who are building a better financial future with WealthWise.
               </p>
             </div>
-            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 16 }}>
+            <div className="ww-home-cta-actions" style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 16 }}>
               <Link to={currentUser ? '/dashboard' : '/signup'} className="ww-btn-white" style={{ display: 'inline-flex', alignItems: 'center', gap: 8, borderRadius: 12, padding: '12px 24px', fontSize: 14, fontWeight: 700, textDecoration: 'none' }}>
                 {currentUser ? 'Open Dashboard' : 'Get Started Free'} <ArrowRight size={14} />
               </Link>
@@ -395,7 +612,7 @@ const HomePage = () => {
       {/* ── FOOTER ── */}
       <footer style={{ borderTop: '1px solid var(--border)', background: 'var(--bg-surface)', padding: '48px 32px' }}>
         <div style={{ maxWidth: 1280, margin: '0 auto' }}>
-          <div style={{ display: 'grid', gridTemplateColumns: '1.5fr 1fr 1fr 1fr 1.5fr', gap: 40 }}>
+          <div className="ww-home-footer-grid" style={{ display: 'grid', gridTemplateColumns: '1.5fr 1fr 1fr 1fr 1.5fr', gap: 40 }}>
             {/* Brand */}
             <div>
               <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
