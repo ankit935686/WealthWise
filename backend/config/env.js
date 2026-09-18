@@ -11,11 +11,13 @@ requiredVars.forEach((key) => {
   }
 });
 
+const configuredFrontendUrls = String(process.env.FRONTEND_URL || '')
+  .split(',')
+  .map((value) => value.trim().replace(/\/$/, ''))
+  .filter(Boolean);
+
 module.exports = {
   port: Number(process.env.PORT),
-  frontendUrls: String(process.env.FRONTEND_URL || '')
-    .split(',')
-    .map((value) => value.trim())
-    .filter(Boolean),
+  frontendUrls: [...new Set(['http://localhost:5173', ...configuredFrontendUrls])],
   mongoUri: process.env.MONGODB_URI,
 };
